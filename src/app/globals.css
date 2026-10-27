@@ -1,26 +1,63 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --color-bg: #0b0d0c;
+  --color-surface: #141816;
+  --color-raised: #1c2320;
+  --color-line: #252c28;
+  --color-ink: #eef2ef;
+  --color-mute: #8a958f;
+  --color-accent: #3ddc97;
+  --color-danger: #ff6b6b;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "SF Pro Text", "Segoe UI", Roboto,
+    sans-serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  color-scheme: dark;
+  background: var(--color-bg);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+button,
+a {
+  touch-action: manipulation;
+}
+
+/* 16px minimum stops iOS Safari zooming into focused inputs */
+input {
+  font-size: 16px;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.toast-in {
+  animation: toast-in 180ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-in {
+    animation: none;
+  }
 }
