@@ -9,7 +9,8 @@ Log spending in two taps, then double-tap the back of your iPhone to do it. A mo
 - **Quick-add screen** with a big keypad, category chips, and an optional note. It's the page Back Tap opens.
 - **Silent logging.** An iOS Shortcut can POST straight to the API, so no app opens at all. You get a notification like "Saved ₹250 · Food".
 - **Dashboard.** Monthly spend, income, left over, a per-day bar chart, and a per-category breakdown.
-- **History.** Transactions grouped by day, with delete.
+- **History.** Transactions grouped into one card per day, each with that day's total, plus delete.
+- **Custom categories.** Add your own and rename or re-emoji existing ones. Renaming also updates your past transactions.
 - **Installable.** Web manifest and icons, so it runs full-screen from the Home Screen.
 - **Private.** Single-user passcode login, plus a bearer token for the Shortcut.
 
@@ -60,6 +61,9 @@ All endpoints need either the session cookie (set by `/api/login`) or `Authoriza
 | `POST` | `/api/transactions` | `{ amount, kind?, category?, note? }` creates a transaction |
 | `DELETE` | `/api/transactions/:id` | delete one |
 | `GET` | `/api/summary?month=YYYY-MM` | totals, per-category and per-day spend |
+| `GET` | `/api/categories` | list categories (both kinds) |
+| `POST` | `/api/categories` | `{ kind, name, emoji? }` adds a category |
+| `PATCH` | `/api/categories/:id` | `{ name?, emoji? }` edits one; a rename also renames it on past transactions |
 
 ```bash
 curl -X POST https://your-app.vercel.app/api/transactions \
@@ -82,13 +86,14 @@ curl -X POST https://your-app.vercel.app/api/transactions \
 
 - Single user only (one passcode). Multi-user would need real accounts and a `user_id` column.
 - No rate limiting beyond the failed-login delay. Add one (for example Upstash) before sharing the URL widely.
-- Not yet built: budgets per category, recurring transactions, CSV export, and editing an existing transaction.
+- Not yet built: deleting categories, budgets per category, recurring transactions, CSV export, and editing an existing transaction.
+- "Other" is the catch-all for unknown category names (for example from a Shortcut), so it can't be renamed. If you rename a category, update the list inside your Shortcut too, or those entries will land in "Other".
 - No automated tests yet. API behaviour was verified manually with `curl`.
 
 ## Project layout
 
 ```
-src/app/            pages (Home, Add, History, Setup), API routes, manifest, icons
+src/app/            pages (Home, Add, History, Categories, Setup), API routes, manifest, icons
 src/components/     AuthGate, TabBar, MonthSwitcher, TxRow, Login
-src/lib/            db, auth, money, dates, categories, Zustand store
+src/lib/            db, auth, money, dates, categories, category-db, Zustand store
 ```

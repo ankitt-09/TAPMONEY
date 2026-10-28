@@ -1,7 +1,8 @@
 "use client";
 
+import { useMemo } from "react";
 import { create } from "zustand";
-import type { Kind } from "./categories";
+import { defaultCategories, lookupEmoji, type Category, type Kind } from "./categories";
 import { monthKey, shiftMonth } from "./dates";
 import type { Summary, Tx } from "./types";
 
@@ -17,6 +18,7 @@ interface State {
   month: string;
   txs: Tx[];
   summary: Summary | null;
+  categories: Category[];
   loading: boolean;
   error: string | null;
 
@@ -28,7 +30,12 @@ interface State {
   refresh: () => Promise<void>;
   add: (tx: NewTx) => Promise<{ ok: true; message: string } | { ok: false; error: string }>;
   remove: (id: number) => Promise<void>;
+  loadCategories: () => Promise<void>;
+  addCategory: (kind: Kind, name: string, emoji: string) => Promise<Result>;
+  editCategory: (id: number, patch: { name?: string; emoji?: string }) => Promise<Result>;
 }
+
+type Result = { ok: true } | { ok: false; error: string };
 
 let requestCounter = 0; // ignore out-of-order responses when the month changes quickly
 
@@ -37,6 +44,7 @@ export const useStore = create<State>((set, get) => ({
   month: monthKey(new Date()),
   txs: [],
   summary: null,
+  categories: [],
   loading: false,
   error: null,
 
@@ -123,4 +131,64 @@ export const useStore = create<State>((set, get) => ({
     if (!res?.ok) set({ txs: previous, error: "Couldn't delete. Try again." });
     void get().refresh();
   },
+
+  async loadCategories() {
+    try {
+      const res = await fetch("/api/categories", { cache: "no-store" });
+      if (res.status === 401) return set({ authed: false });
+      if (!res.ok) return;
+      const { categories } = await res.json();
+      set({ categories });
+    } catch {
+      /* keep whatever we have; defaults are used until this succeeds */
+    }
+  },
+
+  async addCategory(kind, name, emoji) {
+    try {
+      const res = await fetch("/api/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind, name, emoji }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return { ok: false, error: data.error ?? "Couldn't add category." };
+      await get().loadCategories();
+      return { ok: true };
+    } catch {
+      return { ok: false, error: "No connection. Try again." };
+    }
+  },
+
+  async editCategory(id, patch) {
+    try {
+      const res = await fetch(`/api/categories/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return { ok: false, error: data.error ?? "Couldn't save changes." };
+      await get().loadCategories();
+      if (patch.name !== undefined) void get().refresh(); // past transactions were renamed too
+      return { ok: true };
+    } catch {
+      return { ok: false, error: "No connection. Try again." };
+    }
+  },
 }));
+
+/** Categories for one kind. Shows the built-in defaults until the real list has loaded. */
+export function useCategories(kind: Kind): Category[] {
+  const all = useStore((s) => s.categories);
+  return useMemo(() => {
+    const mine = all.filter((c) => c.kind === kind);
+    return mine.length > 0 ? mine : defaultCategories(kind);
+  }, [all, kind]);
+}
+
+/** Returns a function that finds the emoji for a category name. */
+export function useEmojiFor(): (kind: Kind, name: string) => string {
+  const all = useStore((s) => s.categories);
+  return useMemo(() => (kind, name) => lookupEmoji(all, kind, name), [all]);
+}

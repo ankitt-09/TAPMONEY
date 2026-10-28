@@ -29,3 +29,13 @@ export function dayLabel(iso: string): string {
 
 export const timeLabel = (iso: string) =>
   new Date(iso).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
+
+/** YYYY-MM-DD in the device's local time — the key used to group transactions by day. */
+export function dayKey(iso: string): string {
+  const d = new Date(iso);
+  return `${monthKey(d)}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** "Tuesday, 27 October" */
+export const longDayLabel = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" });

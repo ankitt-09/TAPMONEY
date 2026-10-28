@@ -1,5 +1,7 @@
 import type { Kind } from "./categories";
 
+export type { Category } from "./categories";
+
 export interface Tx {
   id: number;
   amountCents: number;

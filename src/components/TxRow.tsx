@@ -1,9 +1,10 @@
-import { emojiFor } from "@/lib/categories";
 import { timeLabel } from "@/lib/dates";
 import { formatMoney } from "@/lib/money";
+import { useEmojiFor } from "@/lib/store";
 import type { Tx } from "@/lib/types";
 
 export function TxRow({ tx }: { tx: Tx }) {
+  const emojiFor = useEmojiFor();
   const income = tx.kind === "income";
   return (
     <div className="flex items-center gap-3">

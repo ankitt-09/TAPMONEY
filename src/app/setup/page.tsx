@@ -1,8 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
-import { EXPENSE_CATEGORIES } from "@/lib/categories";
-import { useStore } from "@/lib/store";
+import { useCategories, useStore } from "@/lib/store";
 
 function Copy({ value, label }: { value: string; label: string }) {
   const [done, setDone] = useState(false);
@@ -46,6 +46,7 @@ function Step({ n, title, children }: { n: number; title: string; children?: Rea
 
 export default function SetupPage() {
   const logout = useStore((s) => s.logout);
+  const expenseCategories = useCategories("expense");
   const origin = useSyncExternalStore(
     () => () => {},
     () => window.location.origin,
@@ -113,8 +114,14 @@ export default function SetupPage() {
                 <p>Type: Number. Prompt: “How much?”</p>
               </Step>
               <Step n={2} title="Choose from List">
-                <p>Add these items:</p>
-                <p className="text-ink">{EXPENSE_CATEGORIES.map((c) => c.name).join(", ")}</p>
+                <p>Add these items (your current categories):</p>
+                <p className="text-ink">{expenseCategories.map((c) => c.name).join(", ")}</p>
+                <p>
+                  Added or renamed one? Update this list in the shortcut too.{" "}
+                  <Link href="/categories" className="text-accent">
+                    Edit categories
+                  </Link>
+                </p>
               </Step>
               <Step n={3} title="Get Contents of URL">
                 <p>URL:</p>

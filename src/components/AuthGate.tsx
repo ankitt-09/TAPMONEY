@@ -9,14 +9,18 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const authed = useStore((s) => s.authed);
   const checkSession = useStore((s) => s.checkSession);
   const refresh = useStore((s) => s.refresh);
+  const loadCategories = useStore((s) => s.loadCategories);
 
   useEffect(() => {
     void checkSession();
   }, [checkSession]);
 
   useEffect(() => {
-    if (authed) void refresh();
-  }, [authed, refresh]);
+    if (authed) {
+      void refresh();
+      void loadCategories();
+    }
+  }, [authed, refresh, loadCategories]);
 
   // Pick up entries made by the Shortcut while the app was in the background.
   useEffect(() => {

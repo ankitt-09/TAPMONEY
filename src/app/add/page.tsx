@@ -1,9 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { categoriesFor, type Kind } from "@/lib/categories";
+import type { Kind } from "@/lib/categories";
 import { currencySymbol, groupTyped } from "@/lib/money";
-import { useStore } from "@/lib/store";
+import { useCategories, useStore } from "@/lib/store";
 
 const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "⌫"] as const;
 
@@ -23,8 +24,9 @@ export default function AddPage() {
   const [toast, setToast] = useState<{ text: string; ok: boolean } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  const categories = categoriesFor(kind);
-  const chosen = category ?? categories[0].name;
+  const categories = useCategories(kind);
+  // If the remembered category was renamed/doesn't exist, fall back to the first one.
+  const chosen = categories.some((c) => c.name === category) ? (category as string) : categories[0].name;
   const canSave = Number(typed) > 0 && !busy;
 
   useEffect(() => () => clearTimeout(toastTimer.current), []);
@@ -119,6 +121,13 @@ export default function AddPage() {
             <span className="truncate">{c.name}</span>
           </button>
         ))}
+        <Link
+          href="/categories"
+          className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-line px-2 py-2.5 text-sm text-accent"
+        >
+          <span aria-hidden>✎</span>
+          <span>Edit</span>
+        </Link>
       </div>
 
       <label className="block">

@@ -1,4 +1,5 @@
-import { normalizeCategory, type Kind } from "@/lib/categories";
+import { resolveCategory } from "@/lib/category-db";
+import type { Kind } from "@/lib/categories";
 import { getDb } from "@/lib/db";
 import { IN_MONTH, TZ, resolveMonth, route } from "@/lib/http";
 import { formatMoney, parseAmountToCents } from "@/lib/money";
@@ -42,7 +43,7 @@ export const POST = route(async (req) => {
   }
 
   const kind: Kind = body.kind === "income" ? "income" : "expense";
-  const category = normalizeCategory(kind, body.category);
+  const category = await resolveCategory(kind, body.category);
   const note = String(body.note ?? "").trim().slice(0, 120);
 
   const db = await getDb();

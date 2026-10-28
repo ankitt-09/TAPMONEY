@@ -3,10 +3,9 @@
 import Link from "next/link";
 import { MonthSwitcher } from "@/components/MonthSwitcher";
 import { TxRow } from "@/components/TxRow";
-import { emojiFor } from "@/lib/categories";
 import { daysInMonth } from "@/lib/dates";
 import { formatMoney } from "@/lib/money";
-import { useStore } from "@/lib/store";
+import { useEmojiFor, useStore } from "@/lib/store";
 
 export default function HomePage() {
   const month = useStore((s) => s.month);
@@ -14,6 +13,7 @@ export default function HomePage() {
   const txs = useStore((s) => s.txs);
   const loading = useStore((s) => s.loading);
   const error = useStore((s) => s.error);
+  const emojiFor = useEmojiFor();
 
   const expense = summary?.expenseCents ?? 0;
   const income = summary?.incomeCents ?? 0;
