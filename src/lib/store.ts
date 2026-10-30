@@ -37,6 +37,55 @@ interface State {
 
 type Result = { ok: true } | { ok: false; error: string };
 
+// Small things remembered on this device so the app can open instantly:
+//  - a hint that this device was signed in (the server still confirms it right after)
+//  - the last category list (so your chips don't flash the defaults first)
+const HINT_KEY = "tm_authed";
+const CATS_KEY = "tm_cats";
+
+function readLocal(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null; // private mode / blocked storage: just skip the shortcut
+  }
+}
+
+function writeLocal(key: string, value: string | null) {
+  try {
+    if (value === null) localStorage.removeItem(key);
+    else localStorage.setItem(key, value);
+  } catch {
+    /* ignore */
+  }
+}
+
+function isCategory(c: unknown): c is Category {
+  const x = c as Partial<Category> | null;
+  return (
+    !!x &&
+    typeof x.id === "number" &&
+    (x.kind === "expense" || x.kind === "income") &&
+    typeof x.name === "string" &&
+    typeof x.emoji === "string"
+  );
+}
+
+function readCachedCategories(): Category[] {
+  try {
+    const parsed = JSON.parse(readLocal(CATS_KEY) ?? "null");
+    return Array.isArray(parsed) ? parsed.filter(isCategory) : [];
+  } catch {
+    return [];
+  }
+}
+
+/** The server said we're not signed in (or we signed out). */
+function dropSession() {
+  writeLocal(HINT_KEY, null);
+  useStore.setState({ authed: false });
+}
+
 let requestCounter = 0; // ignore out-of-order responses when the month changes quickly
 
 export const useStore = create<State>((set, get) => ({
@@ -49,12 +98,22 @@ export const useStore = create<State>((set, get) => ({
   error: null,
 
   async checkSession() {
+    // Instant start: if this device was signed in before, show the app straight away
+    // and confirm with the server in the background (it signs you out if it disagrees).
+    const hinted = readLocal(HINT_KEY) === "1";
+    if (get().authed === null && hinted) {
+      const cached = readCachedCategories();
+      set({ authed: true, ...(cached.length ? { categories: cached } : {}) });
+    }
     try {
       const res = await fetch("/api/session", { cache: "no-store" });
       const data = await res.json();
-      set({ authed: Boolean(data.authed) });
+      const authed = Boolean(data.authed);
+      writeLocal(HINT_KEY, authed ? "1" : null);
+      set({ authed });
     } catch {
-      set({ authed: false, error: "Can't reach the server." });
+      // Offline or server hiccup: keep showing the app if we already were.
+      set({ authed: get().authed ?? false, error: "Can't reach the server." });
     }
   },
 
@@ -66,13 +125,16 @@ export const useStore = create<State>((set, get) => ({
     }).catch(() => null);
     if (!res) return "Can't reach the server.";
     if (!res.ok) return res.status === 401 ? "Wrong passcode." : "Something went wrong.";
+    writeLocal(HINT_KEY, "1");
     set({ authed: true });
     return null;
   },
 
   async logout() {
     await fetch("/api/logout", { method: "POST" }).catch(() => null);
-    set({ authed: false, txs: [], summary: null });
+    writeLocal(HINT_KEY, null);
+    writeLocal(CATS_KEY, null);
+    set({ authed: false, txs: [], summary: null, categories: [] });
   },
 
   setMonth: (month) => {
@@ -91,7 +153,7 @@ export const useStore = create<State>((set, get) => ({
         fetch(`/api/summary?month=${month}`, { cache: "no-store" }),
       ]);
       if (txRes.status === 401 || sumRes.status === 401) {
-        set({ authed: false });
+        dropSession();
         return;
       }
       if (!txRes.ok || !sumRes.ok) throw new Error("Failed to load data.");
@@ -113,11 +175,11 @@ export const useStore = create<State>((set, get) => ({
       });
       const data = await res.json().catch(() => ({}));
       if (res.status === 401) {
-        set({ authed: false });
+        dropSession();
         return { ok: false, error: "Please sign in again." };
       }
       if (!res.ok) return { ok: false, error: data.error ?? "Couldn't save." };
-      void get().refresh();
+      // No refresh here: Home and History reload themselves when you open them.
       return { ok: true, message: data.message as string };
     } catch {
       return { ok: false, error: "No connection. Try again." };
@@ -135,9 +197,10 @@ export const useStore = create<State>((set, get) => ({
   async loadCategories() {
     try {
       const res = await fetch("/api/categories", { cache: "no-store" });
-      if (res.status === 401) return set({ authed: false });
+      if (res.status === 401) return dropSession();
       if (!res.ok) return;
       const { categories } = await res.json();
+      writeLocal(CATS_KEY, JSON.stringify(categories));
       set({ categories });
     } catch {
       /* keep whatever we have; defaults are used until this succeeds */

@@ -80,7 +80,19 @@ curl -X POST https://your-app.vercel.app/api/transactions \
 - **Month boundaries are computed in SQL in the configured timezone**, using a range predicate on `created_at` that can use the index. This is not a `to_char()` comparison.
 - **Plain SQL behind a tiny `Db` interface** instead of an ORM. The same queries run on Neon (HTTP driver, suited to serverless) and PGlite (zero-setup dev).
 - **Auth:** constant-time secret comparison, an httpOnly `SameSite=Lax` cookie that stores a hash rather than the secret, and a delay on failed logins.
+- **The Add screen opens without waiting for the server.** This device remembers that you signed in (and your category list) and shows the keypad at once; the server confirms in the background and signs you out if it disagrees. The Add screen also skips loading the month's data.
 - **No chart or font libraries.** The bar and category charts are plain divs and the font stack is native, which keeps the JS small and the app fast on mobile.
+
+## Start fresh (clear test data)
+
+Your transactions live in the Neon database, so clearing them there clears them everywhere (the live site, and your laptop if its `.env.local` points at the same database).
+
+1. In the Neon dashboard, open your project, then **SQL Editor**. Check the database selector says `neondb`.
+2. Run `select count(*) from transactions;` to see how many test rows there are.
+3. Run `truncate table transactions restart identity;`. This **permanently deletes every transaction** and restarts the ids at 1. Your categories are not touched.
+4. Run the count again. It should say 0.
+
+If you ran the app locally without `DATABASE_URL`, the data is in the `.data` folder instead. Stop the dev server and delete that folder.
 
 ## Known limitations / next steps
 

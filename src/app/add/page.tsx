@@ -20,6 +20,7 @@ export default function AddPage() {
   const [typed, setTyped] = useState("");
   const [category, setCategory] = useState<string | null>(query.get("category"));
   const [note, setNote] = useState("");
+  const [showNote, setShowNote] = useState(false);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<{ text: string; ok: boolean } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -57,6 +58,7 @@ export default function AddPage() {
       showToast(result.message, true);
       setTyped("");
       setNote("");
+      setShowNote(false);
     } else {
       showToast(result.error, false);
     }
@@ -68,7 +70,7 @@ export default function AddPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="flex flex-1 flex-col gap-3">
       {toast && (
         <div
           role="status"
@@ -88,7 +90,7 @@ export default function AddPage() {
             role="tab"
             aria-selected={kind === k}
             onClick={() => switchKind(k)}
-            className={`rounded-lg py-2 capitalize transition ${
+            className={`rounded-lg py-1.5 capitalize transition ${
               kind === k ? "bg-raised text-ink" : "text-mute"
             }`}
           >
@@ -97,57 +99,65 @@ export default function AddPage() {
         ))}
       </div>
 
-      <div className="py-2 text-center" aria-live="polite">
-        <span className="num text-6xl font-semibold tracking-tight">
-          <span className="mr-1 text-4xl text-mute">{currencySymbol}</span>
+      <div className="text-center" aria-live="polite">
+        <span className="num text-5xl font-semibold tracking-tight">
+          <span className="mr-1 text-3xl text-mute">{currencySymbol}</span>
           {typed ? groupTyped(typed) : <span className="text-mute">0</span>}
         </span>
       </div>
 
-      <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Category">
+      {showNote ? (
+        <label className="block">
+          <span className="sr-only">Note (optional)</span>
+          <input
+            autoFocus
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            maxLength={120}
+            placeholder="Note (optional)"
+            className="w-full rounded-xl border border-line bg-surface px-4 py-2.5 outline-none placeholder:text-mute focus:border-accent"
+          />
+        </label>
+      ) : (
+        <button onClick={() => setShowNote(true)} className="mx-auto text-sm text-mute">
+          + Add note
+        </button>
+      )}
+
+      <div role="radiogroup" aria-label="Category" className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5">
         {categories.map((c) => (
           <button
             key={c.name}
             role="radio"
             aria-checked={chosen === c.name}
             onClick={() => setCategory(c.name)}
-            className={`flex items-center justify-center gap-1.5 rounded-xl border px-2 py-2.5 text-sm transition ${
+            className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 py-2 text-sm transition ${
               chosen === c.name
                 ? "border-accent bg-accent/10 text-ink"
                 : "border-line bg-surface text-mute"
             }`}
           >
             <span aria-hidden>{c.emoji}</span>
-            <span className="truncate">{c.name}</span>
+            <span>{c.name}</span>
           </button>
         ))}
         <Link
           href="/categories"
-          className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-line px-2 py-2.5 text-sm text-accent"
+          className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-dashed border-line px-3.5 py-2 text-sm text-accent"
         >
           <span aria-hidden>✎</span>
           <span>Edit</span>
         </Link>
       </div>
 
-      <label className="block">
-        <span className="sr-only">Note (optional)</span>
-        <input
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          maxLength={120}
-          placeholder="Add a note (optional)"
-          className="w-full rounded-xl border border-line bg-surface px-4 py-3 outline-none placeholder:text-mute focus:border-accent"
-        />
-      </label>
-
-      <div className="grid grid-cols-3 gap-2">
+      {/* The keypad stretches to use whatever height is left, and never gets smaller than 12.5rem. */}
+      <div className="grid min-h-[12.5rem] flex-1 grid-cols-3 grid-rows-4 gap-2">
         {KEYS.map((k) => (
           <button
             key={k}
             onClick={() => press(k)}
             aria-label={k === "⌫" ? "Delete" : k}
-            className="num h-14 rounded-xl bg-surface text-2xl font-medium active:bg-raised"
+            className="num rounded-2xl bg-surface text-2xl font-medium active:bg-raised"
           >
             {k}
           </button>
@@ -157,7 +167,7 @@ export default function AddPage() {
       <button
         onClick={save}
         disabled={!canSave}
-        className="w-full rounded-2xl bg-accent py-4 text-lg font-semibold text-bg transition active:scale-[0.99] disabled:opacity-35"
+        className="h-14 w-full rounded-2xl bg-accent text-lg font-semibold text-bg transition active:scale-[0.99] disabled:opacity-35"
       >
         {busy ? "Saving…" : kind === "income" ? "Add income" : "Add expense"}
       </button>

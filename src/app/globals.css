@@ -61,3 +61,11 @@ input {
     animation: none;
   }
 }
+
+/* Hide the scrollbar on swipeable rows (they still scroll) */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

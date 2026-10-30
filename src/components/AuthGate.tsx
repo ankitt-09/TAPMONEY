@@ -1,11 +1,13 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { useStore } from "@/lib/store";
 import { Login } from "./Login";
 import { TabBar } from "./TabBar";
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const authed = useStore((s) => s.authed);
   const checkSession = useStore((s) => s.checkSession);
   const refresh = useStore((s) => s.refresh);
@@ -16,17 +18,22 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   }, [checkSession]);
 
   useEffect(() => {
-    if (authed) {
-      void refresh();
-      void loadCategories();
-    }
-  }, [authed, refresh, loadCategories]);
+    if (authed) void loadCategories();
+  }, [authed, loadCategories]);
+
+  // The Add screen only needs the keypad and your categories, so it skips loading the
+  // month's data. Every other screen loads it when you open it.
+  useEffect(() => {
+    if (authed && pathname !== "/add") void refresh();
+  }, [authed, pathname, refresh]);
 
   // Pick up entries made by the Shortcut while the app was in the background.
   useEffect(() => {
     const onVisible = () => {
       const { authed: ok, refresh: reload } = useStore.getState();
-      if (document.visibilityState === "visible" && ok) void reload();
+      if (document.visibilityState === "visible" && ok && window.location.pathname !== "/add") {
+        void reload();
+      }
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
@@ -43,7 +50,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-md flex-col">
-      <main className="flex-1 px-5 pt-[max(1.25rem,env(safe-area-inset-top))] pb-32">
+      <main className="flex flex-1 flex-col px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-[calc(6rem+env(safe-area-inset-bottom))]">
         {children}
       </main>
       <TabBar />
